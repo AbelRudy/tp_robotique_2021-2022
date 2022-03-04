@@ -8,8 +8,9 @@
 
 bool premierTour = true;
 float firstx, firsty;
+float currentx, currenty;
 float dist;
-float distAParcourir;
+float distAParcourir, AngleAFaire;
 double roll, pitch, yaw;
 geometry_msgs::Twist msg_Twist;
 
@@ -21,16 +22,17 @@ void chatterCallback(const nav_msgs::Odometry msg_Odom)
 		firsty = msg_Odom.pose.pose.position.y;
 		premierTour = false;
 	}
+	currentx = msg_Odom.pose.pose.position.x;
+	currenty = msg_Odom.pose.pose.position.y;
 	dist = sqrt(pow(msg_Odom.pose.pose.position.x - firstx, 2) + pow(msg_Odom.pose.pose.position.y - firsty, 2));
 	ROS_INFO("Start : (%.2f, %.2f),"
 			 " Current : (%.2f, %.2f),"
 			 " Distance = %.2f",
-			firstx,
-			firsty,
-			msg_Odom.pose.pose.position.x,
-			msg_Odom.pose.pose.position.y,
-			dist
-			);
+			 firstx,
+			 firsty,
+			 msg_Odom.pose.pose.position.x,
+			 msg_Odom.pose.pose.position.y,
+			 dist);
 
 	tf::Quaternion q(msg_Odom.pose.pose.orientation.x,
 					 msg_Odom.pose.pose.orientation.y,
@@ -39,6 +41,7 @@ void chatterCallback(const nav_msgs::Odometry msg_Odom)
 	tf::Matrix3x3 m(q);
 
 	m.getRPY(roll, pitch, yaw);
+	ROS_INFO("Yaw = %f", yaw);
 }
 
 void avancerCallback(const std_msgs::Float32 distance)
@@ -48,14 +51,11 @@ void avancerCallback(const std_msgs::Float32 distance)
 
 void tournerCallback(const std_msgs::Float32 angle)
 {
-	if (yaw < (angle.data * M_PI / 180))
-	{
-		msg_Twist.angular.z = 0.3;
-	}
-	else
-	{
-		msg_Twist.angular.z = 0;
-	}
+	AngleAFaire = yaw + angle.data * M_PI / 180;
+	if (AngleAFaire < -M_PI)
+		AngleAFaire += 2 * M_PI;
+	if (AngleAFaire > M_PI)
+		AngleAFaire -= 2 * M_PI;
 }
 
 int main(int argc, char **argv)
@@ -94,14 +94,32 @@ int main(int argc, char **argv)
 		if (dist < distAParcourir)
 		{
 			msg_Twist.linear.x = 0.1;
-			pub.publish(msg_Twist);
+			// pub.publish(msg_Twist);
 		}
 		else
 		{
-			premierTour = true;
+			firstx = currentx;
+			firsty = currenty;
 			distAParcourir = 0;
 			msg_Twist.linear.x = 0;
-			pub.publish(msg_Twist);
+			// pub.publish(msg_Twist);
+		}
+		if (yaw < AngleAFaire - 0.1)
+		{
+			msg_Twist.angular.z = 0.3;
+			if (yaw < AngleAFaire - 0.01)
+				msg_Twist.angular.z = 0.1;
+		}
+		else if (yaw > AngleAFaire + 0.1)
+		{
+			msg_Twist.angular.z = -0.3;
+			if (yaw < AngleAFaire + 0.01)
+				msg_Twist.angular.z = -0.01;
+		}
+		else
+		{
+			msg_Twist.angular.z = 0;
+			// AngleAFaire = 0;
 		}
 		pub.publish(msg_Twist);
 		rate.sleep();
