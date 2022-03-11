@@ -13,6 +13,7 @@ float dist;
 float distAParcourir, AngleAFaire;
 double roll, pitch, yaw;
 geometry_msgs::Twist msg_Twist;
+bool turn = false;
 
 void chatterCallback(const nav_msgs::Odometry msg_Odom)
 {
@@ -51,6 +52,7 @@ void avancerCallback(const std_msgs::Float32 distance)
 
 void tournerCallback(const std_msgs::Float32 angle)
 {
+	turn = true;
 	AngleAFaire = yaw + angle.data * M_PI / 180;
 	if (AngleAFaire < -M_PI)
 		AngleAFaire += 2 * M_PI;
@@ -69,7 +71,7 @@ int main(int argc, char **argv)
 
 	ros::Publisher pub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
-	ros::Rate rate(100);
+	ros::Rate rate(50);
 	while (ros::ok())
 	{
 		// if(dist < 1) //meters
@@ -104,23 +106,43 @@ int main(int argc, char **argv)
 			msg_Twist.linear.x = 0;
 			// pub.publish(msg_Twist);
 		}
-		if (yaw < AngleAFaire - 0.1)
+		
+		if(turn)
 		{
-			msg_Twist.angular.z = 0.3;
-			if (yaw < AngleAFaire - 0.01)
-				msg_Twist.angular.z = 0.1;
+			if(yaw > AngleAFaire - 0.08 || yaw < AngleAFaire + 0.08)
+			{
+				if (yaw - AngleAFaire < 0)
+				{
+					msg_Twist.angular.z = 0.2;
+				}
+				else if (yaw - AngleAFaire > 0)
+				{
+					msg_Twist.angular.z = -0.2;
+				}
+				
+			}else
+			{
+				msg_Twist.angular.z = 0;
+				AngleAFaire = 0;
+			}
 		}
-		else if (yaw > AngleAFaire + 0.1)
-		{
-			msg_Twist.angular.z = -0.3;
-			if (yaw < AngleAFaire + 0.01)
-				msg_Twist.angular.z = -0.01;
-		}
-		else
-		{
-			msg_Twist.angular.z = 0;
-			// AngleAFaire = 0;
-		}
+		// if (yaw < AngleAFaire - 0.1)
+		// {
+		// 	msg_Twist.angular.z = 0.3;
+		// 	if (yaw < AngleAFaire - 0.01)
+		// 		msg_Twist.angular.z = 0.1;
+		// }
+		// else if (yaw > AngleAFaire + 0.1)
+		// {
+		// 	msg_Twist.angular.z = -0.3;
+		// 	if (yaw < AngleAFaire + 0.01)
+		// 		msg_Twist.angular.z = -0.01;
+		// }
+		// else
+		// {
+		// 	msg_Twist.angular.z = 0;
+		// 	// AngleAFaire = 0;
+		// }
 		pub.publish(msg_Twist);
 		rate.sleep();
 		ros::spinOnce();
