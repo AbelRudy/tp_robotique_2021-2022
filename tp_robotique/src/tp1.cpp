@@ -12,8 +12,12 @@ float currentx, currenty;
 float dist;
 float distAParcourir, AngleAFaire;
 double roll, pitch, yaw;
+float xGoal,yGoal;
+float distGoal, thetaGoal;
+
 geometry_msgs::Twist msg_Twist;
 bool turn = false;
+bool avancer = false;
 
 void chatterCallback(const nav_msgs::Odometry msg_Odom)
 {
@@ -47,6 +51,7 @@ void chatterCallback(const nav_msgs::Odometry msg_Odom)
 
 void avancerCallback(const std_msgs::Float32 distance)
 {
+	avancer = true;
 	distAParcourir = distance.data;
 }
 
@@ -60,6 +65,19 @@ void tournerCallback(const std_msgs::Float32 angle)
 		AngleAFaire -= 2 * M_PI;
 }
 
+void goCallback(const geometry_msgs::PoseStamped msg){
+	xGoal = msg.pose.position.x;
+	yGoal = msg.pose.position.y;
+	thetaGoal = atan2(yGoal,xGoal);
+	distGoal = sqrt(pow(xGoal - currentx,2) + pow(yGoal - currenty, 2));
+	std_msgs::Float32 tourner;
+	tourner.data = 45;
+	std_msgs::Float32 avancer;
+	avancer.data = distGoal;
+	tournerCallback(tourner);
+	avancerCallback(avancer);
+}
+
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "listener");
@@ -68,22 +86,32 @@ int main(int argc, char **argv)
 	ros::Subscriber sub = node.subscribe("/odom", 1, chatterCallback);
 	ros::Subscriber sub1 = node.subscribe("/avancer", 1, avancerCallback);
 	ros::Subscriber sub2 = node.subscribe("/tourner", 1, tournerCallback);
+	ros::Subscriber sub3 = node.subscribe("/move_base_simple/goal", 1, goCallback);
 
 	ros::Publisher pub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
 	ros::Rate rate(50);
 	while (ros::ok())
 	{
-		if (dist < distAParcourir)
+		if(avancer)
 		{
-			msg_Twist.linear.x = 0.1;
-		}
-		else
-		{
-			firstx = currentx;
-			firsty = currenty;
-			distAParcourir = 0;
-			msg_Twist.linear.x = 0;
+			if (dist < distAParcourir)
+			{
+				msg_Twist.linear.x = 0.1;
+			}
+			else if (dist > distAParcourir)
+			{
+				msg_Twist.linear.x = - 0.1;
+			}
+			else
+			{
+				firstx = currentx;
+				firsty = currenty;
+				distAParcourir = 0;
+				msg_Twist.linear.x = 0;
+				avancer = false;
+			}
+
 		}
 
 		if (turn)
