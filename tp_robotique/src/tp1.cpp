@@ -74,29 +74,9 @@ int main(int argc, char **argv)
 	ros::Rate rate(50);
 	while (ros::ok())
 	{
-		// if(dist < 1) //meters
-		// {
-		// 	msg_Twist.linear.x = 0.1;
-		// 	pub.publish(msg_Twist);
-		// }
-		// else
-		// {
-		// 	msg_Twist.linear.x = 0;
-		// 	ROS_INFO("%lf",yaw);
-		// 	if(yaw < 1.57)
-		// 	{
-		// 		msg_Twist.angular.z = 0.3;
-		// 		pub.publish(msg_Twist);
-		// 	}else
-		// 	{
-		// 		msg_Twist.angular.z = 0;
-		// 		pub.publish(msg_Twist);
-		// 	}
-		// }
 		if (dist < distAParcourir)
 		{
 			msg_Twist.linear.x = 0.1;
-			// pub.publish(msg_Twist);
 		}
 		else
 		{
@@ -104,13 +84,13 @@ int main(int argc, char **argv)
 			firsty = currenty;
 			distAParcourir = 0;
 			msg_Twist.linear.x = 0;
-			// pub.publish(msg_Twist);
 		}
-		
-		if(turn)
+
+		if (turn)
 		{
-			if(yaw > AngleAFaire - 0.08 || yaw < AngleAFaire + 0.08)
+			if (yaw < AngleAFaire - 0.2 || yaw > AngleAFaire + 0.2)
 			{
+
 				if (yaw - AngleAFaire < 0)
 				{
 					msg_Twist.angular.z = 0.2;
@@ -119,30 +99,14 @@ int main(int argc, char **argv)
 				{
 					msg_Twist.angular.z = -0.2;
 				}
-				
-			}else
+			}
+			else
 			{
 				msg_Twist.angular.z = 0;
 				AngleAFaire = 0;
+				turn = false;
 			}
 		}
-		// if (yaw < AngleAFaire - 0.1)
-		// {
-		// 	msg_Twist.angular.z = 0.3;
-		// 	if (yaw < AngleAFaire - 0.01)
-		// 		msg_Twist.angular.z = 0.1;
-		// }
-		// else if (yaw > AngleAFaire + 0.1)
-		// {
-		// 	msg_Twist.angular.z = -0.3;
-		// 	if (yaw < AngleAFaire + 0.01)
-		// 		msg_Twist.angular.z = -0.01;
-		// }
-		// else
-		// {
-		// 	msg_Twist.angular.z = 0;
-		// 	// AngleAFaire = 0;
-		// }
 		pub.publish(msg_Twist);
 		rate.sleep();
 		ros::spinOnce();
